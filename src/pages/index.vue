@@ -1,81 +1,155 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
-      <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
+  <q-page padding>
+    <!-- Поиск -->
+    <div class="row q-col-gutter-md q-mb-md">
+      <div class="col-12">
+        <q-input
+          v-model="searchQuery"
+          label="Поиск по чатам"
+          dense
+          outlined
+          clearable
+          @update:model-value="filterChats"
+        >
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
+    </div>
 
-        <q-toolbar-title> Quasar App </q-toolbar-title>
+    <!-- Состояния загрузки/ошибки -->
+    <div v-if="loading" class="row justify-center q-mt-lg">
+      <q-spinner size="3em" />
+    </div>
 
-        <div>Quasar v{{ $q.version }}</div>
-      </q-toolbar>
-    </q-header>
+    <div v-else-if="error" class="row justify-center q-mt-lg">
+      <q-banner dense class="bg-negative text-white">
+        {{ error }}
+      </q-banner>
+    </div>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-list>
-        <q-item-label header> Essential Links </q-item-label>
+    <!-- Список чатов -->
+    <div v-else class="row q-col-gutter-md">
+      <div v-for="chat in filteredChats" :key="chat.id" class="col-12 col-sm-6 col-md-4">
+        <q-card class="chat-card" clickable @click="openChat(chat.id)">
+          <q-card-section>
+            <div class="text-h6 ellipsis">
+              {{ chat.title }}
+            </div>
+            <div class="text-caption text-grey">@{{ chat.username || 'без юзернейма' }}</div>
+          </q-card-section>
 
-        <EssentialLink v-for="link in linksList" :key="link.label" v-bind="link" />
-      </q-list>
-    </q-drawer>
+          <q-separator />
 
-    <q-page-container>
-      <router-view />
-    </q-page-container>
-  </q-layout>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-6 text-caption">
+              <q-icon name="chat" size="xs" />
+              {{ chat.messages_count || 0 }} сообщ.
+            </div>
+            <div class="col-6 text-caption">
+              <q-icon name="image" size="xs" />
+              {{ chat.media_count || 0 }} медиа
+            </div>
+            <div class="col-12 text-caption text-grey">
+              <q-icon name="schedule" size="xs" />
+              {{ chat.last_message ? formatDate(chat.last_message) : '—' }}
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-badge :color="chat.peer_type === 'channel' ? 'primary' : 'secondary'">
+              {{ chat.peer_type === 'channel' ? '📢 Канал' : '💬 Группа' }}
+            </q-badge>
+            <q-badge v-if="chat.forum" color="orange"> Форум </q-badge>
+          </q-card-actions>
+        </q-card>
+      </div>
+    </div>
+  </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import EssentialLink, { type EssentialLinkProps } from '@/components/EssentialLink.vue';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { type Chat, tgParserApi } from '@/api/api';
 
-const linksList: EssentialLinkProps[] = [
-  {
-    label: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev',
-  },
-  {
-    label: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework',
-  },
-  {
-    label: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev',
-  },
-  {
-    label: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev',
-  },
-  {
-    label: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev',
-  },
-  {
-    label: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev',
-  },
-  {
-    label: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev',
-  },
-];
+const router = useRouter();
+const chats = ref<Chat[]>([]);
+const loading = ref(true);
+const error = ref<string | null>(null);
+const searchQuery = ref('');
 
-const leftDrawerOpen = ref(false);
+const filteredChats = computed(() => {
+  if (!searchQuery.value) {
+    return chats.value;
+  }
 
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
+  const q = searchQuery.value.toLowerCase();
+
+  return chats.value.filter(
+    (chat) =>
+      chat.title.toLowerCase().includes(q) ||
+      (chat.username && chat.username.toLowerCase().includes(q)),
+  );
+});
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
+
+async function openChat(chatId: string) {
+  await router.push(`/chat/${chatId}`);
+}
+
+async function loadChats() {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    const response = await tgParserApi.getChats();
+
+    if (response.success) {
+      chats.value = response.data;
+    } else {
+      error.value = 'Не удалось загрузить чаты';
+    }
+  } catch (err) {
+    console.error('Error loading chats:', err);
+    error.value = 'Ошибка соединения с сервером';
+  } finally {
+    loading.value = false;
+  }
+}
+
+function filterChats() {
+  // computed автоматически обновляется
+}
+
+onMounted(() => {
+  void loadChats();
+});
 </script>
+
+<style scoped>
+.chat-card {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.chat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>
