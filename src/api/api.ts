@@ -23,6 +23,7 @@ export interface Message {
   forwards: number | null;
   media_count: number;
   reply_to_msg_id: number | null;
+  edit_date: string | null;
 }
 
 export interface Topic {
@@ -33,6 +34,10 @@ export interface Topic {
   messages_count: number;
   last_date: string | null;
 }
+
+export type ChatRouteParams = {
+  id: string;
+};
 
 export const tgParserApi = {
   // Получить список чатов

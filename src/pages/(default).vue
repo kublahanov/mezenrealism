@@ -44,14 +44,14 @@
               :to="`/chat/${chat.id}`"
               @click="closeDrawerIfMobile"
             >
-              <q-item-section avatar>
-                <q-icon :name="chat.peer_type === 'channel' ? 'rss_feed' : 'chat'" />
-              </q-item-section>
+              <!-- <q-item-section avatar> -->
+              <!--   <q-icon :name="chat.peer_type === 'channel' ? 'rss_feed' : 'chat'" /> -->
+              <!-- </q-item-section> -->
               <q-item-section>
                 <q-item-label>{{ chat.title }}</q-item-label>
                 <q-item-label caption>
                   <span class="text-grey-6">
-                    {{ chat.messages_count || 0 }} сообщ.
+                    <span>💬 {{ chat.messages_count || 0 }}</span>
                     <span v-if="chat.media_count">· 🖼️ {{ chat.media_count }}</span>
                   </span>
                 </q-item-label>
