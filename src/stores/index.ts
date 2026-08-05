@@ -1,5 +1,6 @@
 import { defineStore } from '#q-app';
 import { createPinia } from 'pinia';
+import piniaPluginPersistedState from 'pinia-plugin-persistedstate';
 
 /*
  * When adding new properties to stores, you should also
@@ -25,8 +26,8 @@ declare module 'pinia' {
 export default defineStore((/* { ssrContext } */) => {
   const pinia = createPinia();
 
-  // You can add Pinia plugins here
-  // pinia.use(SomePiniaPlugin)
+  // Подключаем плагин для сохранения в localStorage
+  pinia.use(piniaPluginPersistedState);
 
   return pinia;
 });

@@ -11,23 +11,40 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="320">
-      <q-scroll-area style="height: 100%">
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
+      <q-scroll-area class="full-height full-width">
         <q-list>
           <q-item-label header class="q-px-md q-py-sm">
             <div class="row items-center justify-between">
               <div class="text-h6 text-bold text-primary">Список чатов</div>
+              <q-btn
+                flat
+                round
+                dense
+                icon="refresh"
+                size="sm"
+                :loading="chatsStore.loading"
+                @click="refreshChats"
+              >
+                <q-tooltip anchor="bottom middle" self="top middle">
+                  Обновить список чатов
+                </q-tooltip>
+              </q-btn>
               <q-btn flat round dense icon="close" class="lt-md" @click="closeDrawer" />
             </div>
           </q-item-label>
 
           <!-- Состояние загрузки -->
-          <div v-if="chatsLoading" class="row justify-center q-pa-md">
-            <q-spinner size="2em" />
-          </div>
+          <q-banner v-if="chatsStore.loading" inline-actions class="text-black bg-grey-4 q-pa-md">
+            <template v-slot:avatar>
+              <q-icon name="refresh" color="grey" size="sm" />
+            </template>
+            Список чатов обновляется
+            <!-- <q-spinner size="2em" /> -->
+          </q-banner>
 
           <!-- Ошибка -->
-          <q-banner v-else-if="isChatsError" inline-actions class="text-white bg-red q-pa-md">
+          <q-banner v-else-if="chatsStore.error" inline-actions class="text-white bg-red-8 q-pa-md">
             <template v-slot:avatar>
               <q-icon name="signal_wifi_off" color="white" size="sm" />
             </template>
@@ -37,18 +54,15 @@
           <!-- Список чатов -->
           <template v-else>
             <q-item
-              v-for="chat in chats"
+              v-for="chat in chatsStore.chats"
               :key="chat.id"
               clickable
               :active="isChatActive(chat.id)"
               :to="`/chat/${chat.id}`"
               @click="closeDrawerIfMobile"
             >
-              <!-- <q-item-section avatar> -->
-              <!--   <q-icon :name="chat.peer_type === 'channel' ? 'rss_feed' : 'chat'" /> -->
-              <!-- </q-item-section> -->
               <q-item-section>
-                <q-item-label>{{ chat.title }}</q-item-label>
+                <q-item-label class="ellipsis">{{ chat.title }}</q-item-label>
                 <q-item-label caption>
                   <span class="text-grey-6">
                     <span>💬 {{ chat.messages_count || 0 }}</span>
@@ -62,9 +76,16 @@
             </q-item>
 
             <!-- Если чатов нет -->
-            <div v-if="chats.length === 0" class="q-pa-md text-grey-7 text-center">
+            <q-banner
+              v-if="chatsStore.chats.length === 0"
+              inline-actions
+              class="text-black bg-grey-4 q-pa-md"
+            >
+              <template v-slot:avatar>
+                <q-icon name="cancel" color="grey" size="sm" />
+              </template>
               Чаты не найдены
-            </div>
+            </q-banner>
           </template>
         </q-list>
       </q-scroll-area>
@@ -79,14 +100,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { tgParserApi, type Chat } from '@/api/api';
+import { tgParserApi } from '@/api/api';
+import { useChatsStore } from '@/stores/chats';
+
+// Используем store
+const chatsStore = useChatsStore();
 
 const route = useRoute();
 const leftDrawerOpen = ref(false);
 const stats = ref<{ messages: number; media: number } | null>(null);
-const chats = ref<Chat[]>([]);
-const chatsLoading = ref(true);
-const isChatsError = ref<boolean>(false);
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value;
@@ -117,24 +139,9 @@ async function loadStats() {
   }
 }
 
-async function loadChats() {
-  chatsLoading.value = true;
-  isChatsError.value = false;
-
-  try {
-    const response = await tgParserApi.getChats();
-
-    if (response.success) {
-      chats.value = response.data;
-    } else {
-      isChatsError.value = true;
-    }
-  } catch (error) {
-    console.error('Error loading chats:', error);
-    isChatsError.value = true;
-  } finally {
-    chatsLoading.value = false;
-  }
+// Функция обновления
+function refreshChats() {
+  void chatsStore.fetchChats(true);
 }
 
 function closeDrawer() {
@@ -143,6 +150,6 @@ function closeDrawer() {
 
 onMounted(() => {
   void loadStats();
-  void loadChats();
+  void chatsStore.fetchChats(false);
 });
 </script>
