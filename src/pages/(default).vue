@@ -2,8 +2,11 @@
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
       <q-toolbar>
+        <!-- Кнопка переключения меню -->
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
+        <!-- Заголовок тулбара -->
         <q-toolbar-title>Мезенреализм - Архив</q-toolbar-title>
+        <!-- Статистика в тулбаре -->
         <div class="text-caption q-mr-md" v-if="stats">
           <span class="q-mr-sm">💬 {{ stats.messages }}</span>
           <span>🖼️ {{ stats.media }}</span>
@@ -11,6 +14,7 @@
       </q-toolbar>
     </q-header>
 
+    <!-- Левая панель меню -->
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-scroll-area class="full-height full-width">
         <q-list>
@@ -37,7 +41,7 @@
           <!-- Состояние загрузки -->
           <q-banner v-if="chatsStore.loading" inline-actions class="text-black bg-grey-4 q-pa-md">
             <template v-slot:avatar>
-              <q-icon name="refresh" color="grey" size="sm" />
+              <q-icon name="sym_o_update" color="grey" size="sm" />
             </template>
             Список чатов обновляется
             <!-- <q-spinner size="2em" /> -->
@@ -61,17 +65,20 @@
               :to="`/chat/${chat.id}`"
               @click="closeDrawerIfMobile"
             >
+              <!-- Иконка чата -->
+              <q-item-section side>
+                <q-icon :name="getChatIconName(chat)" color="primary" size="xs" />
+              </q-item-section>
+
+              <!-- Статистика чата -->
               <q-item-section>
                 <q-item-label class="ellipsis">{{ chat.title }}</q-item-label>
                 <q-item-label caption>
                   <span class="text-grey-6">
-                    <span>💬 {{ chat.messages_count || 0 }}</span>
-                    <span v-if="chat.media_count">· 🖼️ {{ chat.media_count }}</span>
+                    <span class="q-mr-sm">💬 {{ chat.messages_count || 0 }}</span>
+                    <span>🖼️ {{ chat.media_count || 0 }}</span>
                   </span>
                 </q-item-label>
-              </q-item-section>
-              <q-item-section side v-if="chat.forum">
-                <q-badge color="orange" label="Форум" />
               </q-item-section>
             </q-item>
 
@@ -100,10 +107,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import type { Chat } from '@/api/api';
 import { tgParserApi } from '@/api/api';
 import { useChatsStore } from '@/stores/chats';
 
-// Используем store
 const chatsStore = useChatsStore();
 
 const route = useRoute();
@@ -139,13 +146,21 @@ async function loadStats() {
   }
 }
 
-// Функция обновления
 function refreshChats() {
   void chatsStore.fetchChats(true);
 }
 
 function closeDrawer() {
   leftDrawerOpen.value = false;
+}
+
+function getChatIconName(chat: Chat) {
+  return chat.is_forum
+    ? 'forum'
+    : chat.peer_type === 'channel'
+      ? 'chat_bubble'
+      : 'chat'
+    ;
 }
 
 onMounted(() => {

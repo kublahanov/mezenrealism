@@ -142,7 +142,7 @@ async function loadChatInfo() {
       chatTitle.value = response.data.title;
       chatUsername.value = response.data.username;
       chatType.value = response.data.peer_type;
-      chatForum.value = response.data.forum || false;
+      chatForum.value = response.data.is_forum || false;
     }
   } catch (error) {
     console.error('Error loading chat info:', error);

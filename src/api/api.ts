@@ -5,11 +5,11 @@ export interface Chat {
   title: string;
   username: string | null;
   peer_type: 'channel' | 'supergroup' | 'group' | 'chat';
-  forum: boolean;
-  messages_count: number;
-  media_count: number;
-  first_message: string | null;
-  last_message: string | null;
+  is_forum: boolean;
+  messages_count?: number;
+  media_count?: number;
+  first_message?: string | null;
+  last_message?: string | null;
 }
 
 export interface Message {
@@ -49,6 +49,12 @@ export const tgParserApi = {
   // Получить чат по ID
   async getChat(id: string) {
     const response = await api.get<{ success: boolean; data: Chat }>(`/chats/${id}`);
+    return response.data;
+  },
+
+  // Получить статистику чата по ID
+  async getChatStats(id: string) {
+    const response = await api.get<{ success: boolean; data: Chat }>(`/chats/${id}/stats`);
     return response.data;
   },
 
