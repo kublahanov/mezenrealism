@@ -6,8 +6,8 @@ export interface Chat {
   username: string | null;
   peer_type: 'channel' | 'supergroup' | 'group' | 'chat';
   is_forum: boolean;
-  messages_count?: number;
-  media_count?: number;
+  messages_count?: number | null;
+  media_count?: number | null;
   first_message?: string | null;
   last_message?: string | null;
 }
