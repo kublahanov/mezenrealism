@@ -150,6 +150,9 @@ async function loadChatInfo() {
 }
 
 async function loadTopics() {
+  topics.value = [];
+  showTopics.value = false;
+
   try {
     const response = await tgParserApi.getTopics(chatId.value);
 
@@ -209,6 +212,11 @@ watch(
     if (newId && newId !== oldId) {
       currentPage.value = 1;
       currentTopic.value = 0;
+
+      // Сброс тем
+      topics.value = [];
+      showTopics.value = false;
+
       void loadChatInfo();
       void loadTopics();
       void loadMessages();
