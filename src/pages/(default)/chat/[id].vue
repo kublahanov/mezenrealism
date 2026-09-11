@@ -59,23 +59,84 @@
 
       <div v-else>
         <q-list bordered separator>
+          <!-- Список сообщений -->
           <q-item v-for="msg in messages" :key="msg.id">
             <q-item-section>
+              <!-- Метаданные сообщения -->
               <q-item-label caption>
-                <span class="text-primary">#{{ msg.id }}</span>
-                {{ formatDateTime(msg.date) }}
-                <span v-if="msg.views" class="q-ml-sm"> 👁️ {{ msg.views }} </span>
-                <span v-if="msg.forwards" class="q-ml-sm"> 🔄 {{ msg.forwards }} </span>
+                <!-- Данные о редактировании слева -->
+                <span>
+                  {{ formatDateTime(msg.date) }}
+                </span>
                 <span v-if="msg.edit_date" class="q-ml-sm text-grey-6">
                   ✏️ {{ formatDateTime(msg.edit_date) }}
                 </span>
+                <!-- Остальные данные справа -->
+                <span v-if="msg.views" class="q-ml-sm float-right">
+                  👁️ {{ msg.views }}
+                </span>
+                <span v-if="msg.forwards" class="q-ml-sm float-right">
+                  🔄 {{ msg.forwards }}
+                </span>
+                <span v-if="msg.media_count > 0" class="q-ml-sm float-right">
+                  🖼️ {{ msg.media_count }}
+                </span>
               </q-item-label>
-              <q-item-label v-if="msg.text">
-                {{ msg.text }}
+              <!-- Текст сообщения -->
+              <q-item-label v-if="msg.text" class="message-text">
+                <span v-html="formatMessage(msg.text)"></span>
               </q-item-label>
-              <q-item-label v-if="msg.media_count > 0" caption class="text-primary">
-                🖼️ Медиа: {{ msg.media_count }}
-              </q-item-label>
+              <!-- Медиа -->
+              <div v-if="msg.media && msg.media.length > 0" class="message-media q-mt-sm">
+                <div v-for="media in msg.media" :key="media.id" class="media-item q-mb-sm">
+                  <!-- Фото -->
+                  <q-img
+                    v-if="media.media_type === 'photo'"
+                    :src="`${API_BASE}/media/file/${media.id}`"
+                    :ratio="media.width && media.height ? media.width / media.height : 1"
+                    spinner-color="primary"
+                    style="max-width: 400px; border-radius: 8px"
+                    @click="openMedia(media)"
+                  />
+                  <!-- Видео -->
+                  <video
+                    v-else-if="media.media_type === 'video'"
+                    :src="`${API_BASE}/media/file/${media.id}`"
+                    controls
+                    preload="metadata"
+                    style="max-width: 400px; border-radius: 8px"
+                  />
+                  <!-- Аудио / Голосовое -->
+                  <audio
+                    v-else-if="media.media_type === 'audio' || media.media_type === 'voice'"
+                    :src="`${API_BASE}/media/file/${media.id}`"
+                    controls
+                    preload="metadata"
+                    style="width: 100%; max-width: 400px"
+                  />
+                  <!-- Стикер -->
+                  <img
+                    v-else-if="media.media_type === 'sticker'"
+                    :src="`${API_BASE}/media/file/${media.id}`"
+                    style="max-width: 150px"
+                    alt=""
+                  />
+                  <!-- Документ / другой файл -->
+                  <a
+                    v-else
+                    :href="`${API_BASE}/media/file/${media.id}`"
+                    target="_blank"
+                    class="media-file-link"
+                  >
+                    <q-icon name="attach_file" />
+                    {{ media.file_name || 'Файл' }}
+                    <span v-if="media.file_size" class="text-grey-6">
+                      ({{ formatSize(media.file_size) }})
+                    </span>
+                  </a>
+                </div>
+              </div>
+              <!-- Данные связанные с ответом -->
               <q-item-label v-if="msg.reply_to_msg_id" caption>
                 ↪️ Ответ на <a :href="`#msg-${msg.reply_to_msg_id}`">#{{ msg.reply_to_msg_id }}</a>
               </q-item-label>
@@ -101,7 +162,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { type ChatRouteParams, type Message, tgParserApi, type Topic } from '@/api/api';
+import type { Media } from '@/api/api';
+import { API_BASE, type ChatRouteParams, type Message, tgParserApi, type Topic } from '@/api/api';
+import { formatMessage } from '@/utils/formatMessage';
+// import { useQuasar } from 'quasar';
 
 const route = useRoute();
 const router = useRouter();
@@ -124,6 +188,8 @@ const totalPages = ref(1);
 const loadingMessages = ref(false);
 const messagesError = ref<string | null>(null);
 
+// const $q = useQuasar();
+
 function formatDateTime(dateStr: string): string {
   return new Date(dateStr).toLocaleString('ru-RU', {
     day: '2-digit',
@@ -132,6 +198,28 @@ function formatDateTime(dateStr: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' Б';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' ГБ';
+}
+
+// function openMedia(media: Media) {
+//   const url = `${API_BASE}/media/file/${media.id}`;
+//
+//   if (media.media_type === 'photo') {
+//     $q.dialog({
+//       maximized: true,
+//       component: 'q-img',
+//     });
+//   }
+// }
+
+function openMedia(media: Media) {
+  window.open(`${API_BASE}/media/file/${media.id}`, '_blank');
 }
 
 async function loadChatInfo() {
@@ -250,6 +338,20 @@ a {
 }
 
 a:hover {
+  text-decoration: underline;
+}
+
+.message-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-text :deep(a) {
+  color: #1976d2;
+  text-decoration: none;
+}
+
+.message-text :deep(a:hover) {
   text-decoration: underline;
 }
 </style>

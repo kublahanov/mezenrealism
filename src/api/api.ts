@@ -24,6 +24,7 @@ export interface Message {
   media_count: number;
   reply_to_msg_id: number | null;
   edit_date: string | null;
+  media?: Media[];
 }
 
 export interface Topic {
@@ -33,6 +34,31 @@ export interface Topic {
   is_pinned: boolean;
   messages_count: number;
   last_date: string | null;
+}
+
+export interface Media {
+  id: number;
+  media_type:
+    | 'photo'
+    | 'video'
+    | 'document'
+    | 'audio'
+    | 'voice'
+    | 'sticker'
+    | 'geo'
+    | 'contact'
+    | 'poll'
+    | 'webpage'
+    | 'game'
+    | 'invoice'
+    | 'venue';
+  mime_type: string | null;
+  file_name: string | null;
+  file_path: string;
+  width: number | null;
+  height: number | null;
+  duration: number | null;
+  file_size: number | null;
 }
 
 export type ChatRouteParams = {
@@ -123,3 +149,5 @@ export const tgParserApi = {
     return response.data;
   },
 };
+
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
