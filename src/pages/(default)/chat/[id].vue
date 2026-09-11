@@ -149,8 +149,11 @@
           <q-pagination
             v-model="currentPage"
             :max="totalPages"
+            :max-pages="7"
             direction-links
             boundary-links
+            boundary-numbers
+            ellipses
             @update:model-value="loadMessages"
           />
         </div>
